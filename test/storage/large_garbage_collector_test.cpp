@@ -23,8 +23,10 @@ class LargeGCTests : public TerrierTest {
 
   const uint32_t num_iterations = 10;
   const uint16_t max_columns = 20;
-  const uint32_t initial_table_size = 1000;
-  const uint32_t num_txns = 1000;
+  // const uint32_t initial_table_size = 1000;
+  // const uint32_t num_txns = 1000;
+  const uint32_t initial_table_size = 1000000;
+  const uint32_t num_txns = 100000;
   const uint32_t batch_size = 100;
   storage::BlockStore block_store_{1000, 1000};
   storage::RecordBufferSegmentPool buffer_pool_{10000, 10000};
@@ -39,7 +41,7 @@ class LargeGCTests : public TerrierTest {
 
   void GCThreadLoop() {
     while (run_gc_) {
-      std::this_thread::sleep_for(gc_period_);
+      // std::this_thread::sleep_for(gc_period_);
       if (!gc_paused_) gc_->PerformGarbageCollection();
     }
   }
