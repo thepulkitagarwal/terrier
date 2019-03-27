@@ -72,6 +72,16 @@ class GarbageCollector {
                         std::vector<transaction::timestamp_t> *active_txns) const;
 
   /**
+   * Given the version head, perform interval gc on the head of the chain
+   * @param txn pointer to the transaction that created an UndoRecord in this chain
+   * @param version_ptr pointer to the head of the chain
+   * @param active_txns vector containing all active transactions
+   * @return true if an UndoRecord created by txn was unlinked
+   */
+  bool UnlinkUndoRecordHeadOfChain(transaction::TransactionContext *txn, UndoRecord *version_ptr,
+                                   std::vector<transaction::timestamp_t> *active_txns) const;
+
+  /**
    * Given a version chain, perform interval gc on all versions except the head of the chain
    * @param txn pointer to the transaction that created an UndoRecord in this chain
    * @param version_chain_head pointer to the head of the chain

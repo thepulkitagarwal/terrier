@@ -149,25 +149,42 @@ bool GarbageCollector::UnlinkUndoRecord(transaction::TransactionContext *const t
   bool collected = UnlinkUndoRecordRestOfChain(txn, version_ptr, active_txns);
 
   // Perform gc for head of the chain
-  // TODO(pulkit): Assuming can GC any version greater than the oldest timestamp
+  if (UnlinkUndoRecordHeadOfChain(txn, version_ptr, active_txns)) {
+    collected = true;
+  }
+  return collected;
+}
+
+bool GarbageCollector::UnlinkUndoRecordHeadOfChain(transaction::TransactionContext *const txn,
+                                                   UndoRecord *const version_ptr,
+                                                   std::vector<transaction::timestamp_t> *const active_txns) const {
   transaction::timestamp_t version_ptr_timestamp = version_ptr->Timestamp().load();
-  // If there are no active transactions, or if the version pointer is older than the oldest active transaction,
-  // Collect the head of the chain using compare and swap
-  // Note that active_txns is sorted in descending order, so its tail should have the oldest txn's timestamp
-  if (active_txns->empty() || version_ptr_timestamp < active_txns->back()) {
-    if (transaction::TransactionUtil::Committed(version_ptr->Timestamp().load())) {
-      UndoRecord *to_be_unlinked = version_ptr;
+  DataTable *table = version_ptr->Table();
+  const TupleSlot slot = version_ptr->Slot();
+  const TupleAccessStrategy &accessor = table->accessor_;
+
+  bool collected = false;
+
+  // Find out if there is an active_txn that can possibly look at the header
+  // If not, collect the head of the chain using compare and swap
+  if (active_txns->empty() || active_txns->front() < version_ptr_timestamp) {
+    // There is no active transaction that can look at the version pointer
+    if (transaction::TransactionUtil::Committed(version_ptr_timestamp)) {
       // Our UndoRecord is the first in the chain, handle contention on the write lock with CAS
       if (table->CompareAndSwapVersionPtr(slot, accessor, version_ptr, version_ptr->Next())) {
-        UnlinkUndoRecordVersion(txn, to_be_unlinked);
+        UnlinkUndoRecordVersion(txn, version_ptr);
         if (version_ptr_timestamp == txn->TxnId().load()) {
           // If I was the header, make collected true, because I was collected
           collected = true;
         }
+      } else {
+        // Someone swooped the VersionPointer while we were trying to swap it (aka took the write lock)
+        // But the original header still exists somewhere in the chain, so collect that
+        collected = UnlinkUndoRecordRestOfChain(txn, version_ptr, active_txns);
       }
-      // Someone swooped the VersionPointer while we were trying to swap it (aka took the write lock)
     }
   }
+
   return collected;
 }
 
