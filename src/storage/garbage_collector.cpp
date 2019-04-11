@@ -15,6 +15,12 @@
 
 namespace terrier::storage {
 
+bool GarbageCollector::CheckQueuesEmpty() {
+  bool buffers_empty = buffers_to_deallocate_.empty() && buffers_to_unlink_.empty();
+  bool txns_empty = txns_to_deallocate_.empty() && txns_to_unlink_.empty();
+  return buffers_empty && txns_empty;
+}
+
 std::pair<uint32_t, uint32_t> GarbageCollector::PerformGarbageCollection() {
   // Clear the visited slots
   visited_slots_.clear();

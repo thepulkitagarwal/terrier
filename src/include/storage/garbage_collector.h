@@ -43,6 +43,8 @@ class GarbageCollector {
    */
   std::pair<uint32_t, uint32_t> PerformGarbageCollection();
 
+  bool CheckQueuesEmpty();
+
  private:
   /**
    * Process the deallocate queue

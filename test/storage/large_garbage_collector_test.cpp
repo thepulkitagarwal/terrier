@@ -18,6 +18,9 @@ class LargeGCTests : public TerrierTest {
     // Make sure all garbage is collected. This take 2 runs for unlink and deallocate
     gc_->PerformGarbageCollection();
     gc_->PerformGarbageCollection();
+
+    EXPECT_TRUE(gc_->CheckQueuesEmpty());
+
     delete gc_;
   }
 
