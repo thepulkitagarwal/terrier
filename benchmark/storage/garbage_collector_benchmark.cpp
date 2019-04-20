@@ -1,6 +1,8 @@
 #include <utility>
 #include <vector>
 
+#include <sched.h>
+
 #include "benchmark/benchmark.h"
 #include "common/scoped_timer.h"
 #include "storage/garbage_collector.h"
@@ -14,6 +16,17 @@ class GarbageCollectorBenchmark : public benchmark::Fixture {
     gc_ = new storage::GarbageCollector(txn_manager);
     run_gc_ = true;
     gc_thread_ = std::thread([this] { GCThreadLoop(); });
+    // Create a cpu_set_t object representing a set of CPUs. Clear it and mark
+    // only CPU i as set.
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(0, &cpuset);
+    int rc = pthread_setaffinity_np(gc_thread_.native_handle(),
+                                    sizeof(cpu_set_t), &cpuset);
+    if (rc != 0) {
+      std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+    }
+
   }
 
   uint32_t EndGC() {
